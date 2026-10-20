@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz de Reologia: Viscosímetros & Plastômetros</title>
+    <!-- Font Awesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Outfit & Space Grotesk -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <!-- Firebase Imports (Auth e Realtime Database) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { 
+            getDatabase, 
+            ref, 
+            set, 
+            get, 
+            child 
+        } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyACM7zUg7lHh4guBNKpGtrYUh_EpNS9_44",
+          authDomain: "trabalho-reologia.firebaseapp.com",
+          databaseURL: "https://trabalho-reologia-default-rtdb.firebaseio.com",
+          projectId: "trabalho-reologia",
+          storageBucket: "trabalho-reologia.firebasestorage.app",
+          messagingSenderId: "655100498314",
+          appId: "1:655100498314:web:767d7abc36c23ad94cf873",
+          measurementId: "G-FF5SF7SD60"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        window.firebaseDb = db;
+        window.firebaseAuth = auth;
+        window.dbRef = ref;
+        window.dbSet = set;
+        window.dbGet = get;
+        window.dbChild = child;
+
+        async function initAuth() {
+            try {
+                await signInAnonymously(auth);
+            } catch (err) {
+                console.warn("Autenticação anônima em fallback:", err);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.currentUserUid = user.uid;
+            }
+        });
+
+        initAuth();
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                    colors: {
+                        poly: {
+                            primary: '#059669',     /* Emerald 600 */
+                            darkGreen: '#047857',   /* Emerald 700 */
+                            deepGreen: '#064e3b',   /* Emerald 900 */
+                            mint: '#10b981',        /* Emerald 500 */
+                            lightMint: '#d1fae5',   /* Emerald 100 */
+                            paleGreen: '#ecfdf5',   /* Emerald 50 */
+                            accentYellow: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f4fbf7;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.08) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: #064e3b;
+        }
+
+        .glass-poly {
+            background: rgba(255, 255, 255, 0.93);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(16, 185, 129, 0.25);
+            box-shadow: 0 20px 40px -15px rgba(4, 120, 87, 0.12);
+        }
+
+        .polymer-pattern-bg {
+            background-image: radial-gradient(#10b981 1.2px, transparent 1.2px), radial-gradient(#059669 1.2px, #f4fbf7 1.2px);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+            opacity: 0.25;
+        }
+
+        .shadow-poly-lg {
+            box-shadow: 0 12px 30px -5px rgba(5, 150, 105, 0.2);
+        }
+
+        .laminar-flow-anim {
+            animation: laminarFlow 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes laminarFlow {
+            0% { transform: scale(0.97) translateY(-4px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .capillary-clog-anim {
+            animation: capillaryClog 0.4s ease-in-out forwards;
+        }
+
+        @keyframes capillaryClog {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+            100% { transform: translateX(0); }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #ecfdf5; }
+        ::-webkit-scrollbar-thumb {
+            background: #10b981;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans flex flex-col items-center justify-between p-3 sm:p-6 overflow-x-hidden relative selection:bg-poly-mint selection:text-white">
+
+    <canvas id="rheology-bg-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+    <header class="w-full max-w-4xl flex items-center justify-between py-3 px-5 glass-poly rounded-2xl z-10 mb-4 border-b-4 border-poly-primary">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-poly-darkGreen to-poly-mint flex items-center justify-center text-white text-xl font-bold shadow-md animate-pulse">
+                <i class="fa-solid fa-dna"></i>
+            </div>
+            <div>
+                <h1 class="text-base sm:text-xl font-black uppercase tracking-wider text-poly-deepGreen">
+                    LABORATÓRIO DE POLÍMEROS <span class="text-xs text-poly-darkGreen font-mono px-2 py-0.5 rounded-full bg-poly-lightMint border border-poly-mint/40">15 ENSAIOS</span>
+                </h1>
+                <p class="text-[11px] text-emerald-800 font-mono hidden sm:block">Viscosimetria, Plastometria MFI & Reologia de Fundidos</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs font-mono">
+            <button id="btn-top-ranking" class="flex items-center gap-1.5 bg-poly-paleGreen hover:bg-poly-lightMint px-3.5 py-2 rounded-xl border border-poly-mint text-poly-darkGreen font-bold transition-all cursor-pointer shadow-sm">
+                <i class="fa-solid fa-trophy text-poly-accentYellow"></i>
+                <span>RANKING GENERAL</span>
+            </button>
+            <span class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-poly-mint/40 text-poly-darkGreen font-bold hidden sm:flex shadow-sm">
+                <i class="fa-solid fa-temperature-high text-poly-primary"></i>
+                <span>PLASTÔMETRO MFI</span>
+            </span>
+        </div>
+    </header>
+
+    <main class="w-full max-w-3xl glass-poly rounded-3xl p-5 sm:p-8 relative z-10 my-auto border-t-4 border-poly-mint shadow-poly-lg">
+
+        <div class="absolute -top-6 -right-6 w-20 h-20 bg-poly-lightMint/60 rounded-full blur-xl pointer-events-none"></div>
+        <div class="absolute -bottom-6 -left-6 w-20 h-20 bg-poly-lightMint/60 rounded-full blur-xl pointer-events-none"></div>
+
+        <div class="absolute top-4 right-6 text-poly-mint/20 text-4xl pointer-events-none font-mono font-bold select-none hidden sm:block">
+            -[CH₂-CH₂]ₙ-
+        </div>
+
+        <!-- 0. TELA DE CADASTRO DO JOGADOR -->
+        <section id="auth-screen" class="text-center py-4 flex flex-col items-center">
+            <div class="w-20 h-20 rounded-3xl bg-poly-paleGreen border-2 border-poly-primary flex items-center justify-center shadow-md mb-4 text-poly-primary">
+                <i class="fa-solid fa-id-card text-4xl"></i>
+            </div>
+
+            <h2 class="text-2xl sm:text-4xl font-black text-poly-deepGreen mb-2">
+                CADASTRO DE OPERADOR REOLÓGICO
+            </h2>
+            <p class="text-emerald-900 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
+                Insira seus dados para salvar seu resultado nos <strong class="text-poly-primary">15 ensaios de polímeros</strong> no ranking ao vivo.
+            </p>
+
+            <form id="player-form" class="w-full max-w-md space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-mono font-bold text-poly-darkGreen uppercase mb-1.5">Nome / Nickname do Operador *</label>
+                    <input type="text" id="player-name" required placeholder="Ex: Eng. Maria Silva" class="w-full px-4 py-3 bg-white border-2 border-emerald-200 focus:border-poly-primary rounded-xl text-poly-deepGreen font-medium outline-none transition-colors shadow-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-mono font-bold text-poly-darkGreen uppercase mb-1.5">Turma / Email / Instituição</label>
+                    <input type="text" id="player-info" placeholder="Ex: Engenharia de Materiais - Turma A" class="w-full px-4 py-3 bg-white border-2 border-emerald-200 focus:border-poly-primary rounded-xl text-poly-deepGreen font-medium outline-none transition-colors shadow-sm">
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-poly-primary via-poly-darkGreen to-poly-deepGreen hover:opacity-95 text-white font-extrabold text-base rounded-2xl shadow-poly-lg transition-all cursor-pointer flex items-center justify-center gap-2">
+                    <span>CONFIRMAR & IR PARA O DESAFIO</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </section>
+
+        <!-- 1. TELA INICIAL -->
+        <section id="start-screen" class="text-center py-4 flex flex-col items-center hidden">
+            
+            <div class="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-poly-lightMint border border-poly-mint text-poly-deepGreen text-xs font-mono font-bold">
+                <i class="fa-solid fa-atom text-poly-primary"></i>
+                <span>15 QUESTÕES TÉCNICAS REOLÓGICAS</span>
+            </div>
+
+            <h2 class="text-2xl sm:text-4xl font-black text-poly-deepGreen mb-3">
+                CARACTERIZAÇÃO REOLÓGICA DE POLÍMEROS
+            </h2>
+            <p class="text-emerald-900 text-xs sm:text-sm max-w-lg mb-6 leading-relaxed">
+                Avalie seu domínio em <strong>Índice de Fluidez (MFI)</strong>, <strong>Viscosímetros Rotacionais</strong>, <strong>Viscosimetria Capilar Ubbelohde</strong> e <strong>Efeitos Elásticos de Fundidos</strong>.
+            </p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-2xl mb-8">
+                <div class="p-3.5 rounded-2xl bg-white border-2 border-poly-lightMint text-center hover:border-poly-primary transition-all shadow-sm">
+                    <i class="fa-solid fa-temperature-high text-poly-primary text-xl mb-1"></i>
+                    <p class="text-[11px] text-poly-deepGreen font-bold">Plastômetro MFI</p>
+                    <p class="text-[9px] text-emerald-700 font-mono">ASTM D1238 / ISO 1133</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-white border-2 border-poly-lightMint text-center hover:border-poly-primary transition-all shadow-sm">
+                    <i class="fa-solid fa-arrows-spin text-poly-darkGreen text-xl mb-1"></i>
+                    <p class="text-[11px] text-poly-deepGreen font-bold">Viscosímetro Brookfield</p>
+                    <p class="text-[9px] text-emerald-700 font-mono">Viscosidade Dinâmica (cP)</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-white border-2 border-poly-lightMint text-center hover:border-poly-primary transition-all shadow-sm">
+                    <i class="fa-solid fa-vial text-poly-mint text-xl mb-1"></i>
+                    <p class="text-[11px] text-poly-deepGreen font-bold">Capilar Ubbelohde</p>
+                    <p class="text-[9px] text-emerald-700 font-mono">Viscosidade Intrínseca [η]</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-white border-2 border-poly-lightMint text-center hover:border-poly-primary transition-all shadow-sm">
+                    <i class="fa-solid fa-chart-line text-poly-primary text-xl mb-1"></i>
+                    <p class="text-[11px] text-poly-deepGreen font-bold">Comportamento</p>
+                    <p class="text-[9px] text-emerald-700 font-mono">Shear-Thinning & Pseudoplasticidade</p>
+                </div>
+            </div>
+
+            <button id="btn-start" class="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-poly-primary via-poly-darkGreen to-poly-deepGreen hover:opacity-95 text-white font-extrabold text-lg rounded-2xl shadow-poly-lg transform hover:-translate-y-1 active:translate-y-0 transition-all cursor-pointer flex items-center justify-center gap-3">
+                <i class="fa-solid fa-play text-poly-paleGreen"></i>
+                <span>INICIAR BANCO DE 15 ENSAIOS</span>
+            </button>
+        </section>
+
+        <!-- 2. TELA DAS PERGUNTAS -->
+        <section id="quiz-screen" class="hidden">
+            
+            <header class="mb-6">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span id="question-tracker" class="text-xs font-mono font-bold text-poly-deepGreen bg-poly-lightMint px-3 py-1.5 rounded-xl border border-poly-mint/40">
+                            Ensaio 1/15
+                        </span>
+                        <span id="category-badge" class="text-[11px] font-mono font-bold text-poly-darkGreen bg-white border border-poly-mint/50 px-3 py-1.5 rounded-xl shadow-sm">
+                            MFI & Polímeros Fundidos
+                        </span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div id="combo-container" class="hidden items-center gap-1.5 bg-poly-accentYellow text-white text-xs font-black px-3 py-1 rounded-xl shadow-md animate-bounce">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span id="combo-text">TAXA DE CISALHAMENTO x2</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 font-mono font-black text-sm text-poly-darkGreen bg-white border-2 border-poly-mint px-3 py-1.5 rounded-xl shadow-sm">
+                            <i class="fa-solid fa-gauge-high text-poly-primary"></i>
+                            <span id="score-tracker">0 PTS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full bg-emerald-100 rounded-full h-3.5 p-0.5 border border-emerald-200 relative overflow-hidden">
+                    <div id="progress-bar" class="bg-gradient-to-r from-poly-mint via-poly-primary to-poly-deepGreen h-full rounded-full transition-all duration-500 w-0 relative">
+                        <div class="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full opacity-80 animate-ping"></div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="question-box" class="mb-6">
+                <h3 id="question-text" class="text-lg sm:text-2xl font-bold text-poly-deepGreen leading-snug mb-5"></h3>
+                <div id="options-container" class="space-y-3"></div>
+            </div>
+
+            <div id="explanation-card" class="hidden mb-6 p-4 sm:p-5 rounded-2xl bg-poly-paleGreen border-2 border-poly-mint shadow-md">
+                <div class="flex items-start gap-3">
+                    <div id="explanation-icon-box" class="w-10 h-10 rounded-xl bg-poly-lightMint border border-poly-mint flex items-center justify-center text-poly-darkGreen text-xl flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-microscope"></i>
+                    </div>
+                    <div class="w-full">
+                        <div class="flex items-center justify-between mb-1">
+                            <h4 id="explanation-title" class="text-xs font-mono font-extrabold uppercase tracking-wider text-poly-darkGreen">
+                                FUNDAMENTAÇÃO TÉCNICA
+                            </h4>
+                            <span id="formula-tag" class="text-[10px] font-mono text-poly-darkGreen bg-white px-2 py-0.5 rounded border border-poly-mint/40">
+                                Norma: ISO 1133 / ASTM D1238
+                            </span>
+                        </div>
+                        <p id="explanation-text" class="text-xs sm:text-sm text-emerald-950 leading-relaxed font-medium"></p>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="flex items-center justify-between pt-2 border-t border-emerald-200">
+                <span class="text-xs font-mono text-emerald-700 hidden sm:block">💡 Dica: Alta viscosidade = Menor taxa de fluidez (MFI baixo).</span>
+                <button id="btn-next" class="hidden ml-auto px-8 py-3.5 bg-gradient-to-r from-poly-primary to-poly-deepGreen hover:opacity-95 text-white font-extrabold rounded-2xl shadow-poly-lg transition-all cursor-pointer flex items-center gap-2">
+                    <span id="btn-next-text">Próximo Ensaio</span>
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </footer>
+        </section>
+
+        <!-- 3. TELA FINAL DE RESULTADOS -->
+        <section id="result-screen" class="text-center py-4 flex flex-col items-center hidden">
+            
+            <div class="relative mb-6">
+                <div id="result-glow" class="absolute -inset-3 rounded-full blur-xl opacity-60 bg-poly-mint"></div>
+                <div id="result-icon-bg" class="relative w-28 h-28 rounded-3xl bg-white border-2 border-poly-primary flex items-center justify-center shadow-lg">
+                    <i id="result-icon" class="fa-solid fa-award text-6xl text-poly-accentYellow"></i>
+                </div>
+            </div>
+
+            <h2 id="result-title" class="text-3xl sm:text-4xl font-black text-poly-deepGreen mb-2">
+                RELATÓRIO REOLÓGICO CONCLUÍDO!
+            </h2>
+            <p id="profile-title" class="text-xs sm:text-sm font-mono font-bold text-poly-darkGreen uppercase mb-2">
+                MESTRE EM REOLOGIA DE POLÍMEROS
+            </p>
+            <p id="result-message" class="text-emerald-900 text-sm sm:text-base max-w-md mb-6 leading-relaxed">
+                Excelente caracterização de escoamento e controle de qualidade!
+            </p>
+
+            <div class="grid grid-cols-3 gap-3 w-full max-w-md mb-8">
+                <div class="p-3 bg-white border-2 border-poly-lightMint rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-mono text-emerald-700 uppercase font-bold">Acertos</p>
+                    <p id="final-score" class="text-xl font-black text-poly-primary">0 / 15</p>
+                </div>
+                <div class="p-3 bg-white border-2 border-poly-lightMint rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-mono text-emerald-700 uppercase font-bold">Precisão</p>
+                    <p id="final-percentage" class="text-xl font-black text-poly-darkGreen">0%</p>
+                </div>
+                <div class="p-3 bg-white border-2 border-poly-lightMint rounded-2xl shadow-sm">
+                    <p class="text-[10px] font-mono text-emerald-700 uppercase font-bold">Maior Combo</p>
+                    <p id="final-combo" class="text-xl font-black text-poly-accentYellow">0x</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                <button id="btn-restart" class="flex-1 py-4 px-6 bg-gradient-to-r from-poly-primary to-poly-deepGreen hover:opacity-95 text-white font-extrabold rounded-2xl shadow-poly-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Repetir Ensaio</span>
+                </button>
+                <button id="btn-review" class="py-4 px-6 bg-white hover:bg-poly-paleGreen border-2 border-poly-mint text-poly-deepGreen font-bold rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-book-open text-poly-primary"></i>
+                    <span>Ver Gabarito</span>
+                </button>
+                <button id="btn-view-leaderboard" class="py-4 px-6 bg-poly-lightMint hover:bg-emerald-200 border-2 border-poly-darkGreen text-poly-deepGreen font-bold rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                    <i class="fa-solid fa-trophy text-poly-accentYellow"></i>
+                    <span>Ranking</span>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="w-full max-w-4xl text-center py-3 text-xs font-mono text-emerald-800 z-10 font-medium">
+        Helena Soares &bull; Manuela Manchini &bull; Viscosimetria e Plastometria (15 Questões)
+    </footer>
+
+    <!-- MODAL DE LEADERBOARD / RANKING -->
+    <div id="leaderboard-modal" class="fixed inset-0 bg-emerald-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-poly w-full max-w-2xl max-h-[85vh] rounded-3xl border-2 border-poly-primary flex flex-col overflow-hidden shadow-2xl">
+            <header class="p-4 sm:p-5 border-b-2 border-poly-lightMint flex items-center justify-between bg-white">
+                <div class="flex items-center gap-2 font-mono">
+                    <i class="fa-solid fa-trophy text-poly-accentYellow text-2xl"></i>
+                    <div>
+                        <h3 class="text-base font-bold text-poly-deepGreen uppercase tracking-wider">RANKING EM TEMPO REAL</h3>
+                        <p class="text-[10px] text-emerald-700">Classificação por Pontos, Acertos (15 Questões) e Combo</p>
+                    </div>
+                </div>
+                <button id="btn-close-leaderboard" class="w-8 h-8 rounded-xl bg-poly-lightMint hover:bg-emerald-200 text-poly-deepGreen flex items-center justify-center transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-3 bg-poly-paleGreen/50" id="leaderboard-container">
+                <div class="text-center py-8 text-emerald-800 font-mono text-xs">
+                    <i class="fa-solid fa-spinner animate-spin text-2xl text-poly-primary mb-2"></i>
+                    <p>Carregando Classificação dos Operadores...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE GABARITO -->
+    <div id="review-modal" class="fixed inset-0 bg-emerald-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-poly w-full max-w-2xl max-h-[85vh] rounded-3xl border-2 border-poly-primary flex flex-col overflow-hidden shadow-2xl">
+            <header class="p-4 sm:p-5 border-b-2 border-poly-lightMint flex items-center justify-between bg-white">
+                <h3 class="text-base font-bold text-poly-deepGreen flex items-center gap-2 font-mono">
+                    <i class="fa-solid fa-clipboard-check text-poly-primary"></i> Gabarito Técnico - 15 Ensaios Reológicos
+                </h3>
+                <button id="btn-close-review" class="w-8 h-8 rounded-xl bg-poly-lightMint hover:bg-emerald-200 text-poly-deepGreen flex items-center justify-center transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            <div id="review-list" class="p-4 sm:p-5 overflow-y-auto space-y-4 bg-poly-paleGreen/50"></div>
+        </div>
+    </div>
+
+    <script>
+        const rheologyQuizData = [
+            {
+                question: "1. Qual parâmetro é diretamente medido em um ensaio de Plastometria de Extrusão (MFI - Melt Flow Index) conforme as normas ASTM D1238 / ISO 1133?",
+                options: [
+                    "Viscosidade intrínseca do polímero em solução diluída",
+                    "Massa de termoplástico fundido extrudado (em gramas) em um intervalo de 10 minutos a temperatura e carga normalizadas",
+                    "A tensão de ruptura sob tração do polímero no estado sólido",
+                    "O tempo necessário para um polímero cristalizar completamente"
+                ],
+                answer: 1,
+                category: "Plastômetro MFI / MFR",
+                standard: "ASTM D1238 / ISO 1133",
+                explanation: "O MFI mede a massa de resina fundida (g/10 min) extrudada por um capilar padronizado sob temperatura e carga constantes. Quanto maior o MFI, menor é a viscosidade da resina."
+            },
+            {
+                question: "2. Qual é a relação fundamental entre o Índice de Fluidez (MFI) e a Viscosidade do Polímero fundido?",
+                options: [
+                    "O MFI é inversamente proporcional à viscosidade do polímero fundido",
+                    "O MFI é diretamente proporcional à viscosidade (maior MFI = maior viscosidade)",
+                    "O MFI não possui qualquer relação com a viscosidade ou massa molar",
+                    "O MFI mede unicamente a densidade relativa do material fundido"
+                ],
+                answer: 0,
+                category: "Relação MFI vs Viscosidade",
+                standard: "Fundamentos Reológicos",
+                explanation: "Cadeias poliméricas maiores (maior massa molar) oferecem maior resistência ao escoamento (alta viscosidade) e, consequentemente, apresentam um valor de MFI mais baixo."
+            },
+            {
+                question: "3. Qual tipo de viscosímetro opera medindo o torque necessário para rotacionar um spindle (fuso) imerso no fluido polimérico?",
+                options: [
+                    "Viscosímetro Capilar Ubbelohde",
+                    "Viscosímetro de Orifício Ford / Saybolt",
+                    "Viscosímetro Rotacional (ex: Brookfield / Cone e Placa)",
+                    "Viscosímetro de Esfera Rolante Hoppler"
+                ],
+                answer: 2,
+                category: "Viscosímetros Rotacionais",
+                standard: "ASTM D2196 / ISO 2555",
+                explanation: "Viscosímetros rotacionais medem a resistência gerada à rotação de um spindle no fluido, convertendo essa força/torque em viscosidade dinâmica (cP ou Pa·s)."
+            },
+            {
+                question: "4. A maioria dos polímeros fundidos exibe comportamento Pseudoplástico (Shear-Thinning). O que acontece com a viscosidade desses materiais ao aumentar a taxa de cisalhamento?",
+                options: [
+                    "A viscosidade aumenta drasticamente sob alto cisalhamento",
+                    "A viscosidade diminui à medida que a taxa de cisalhamento aumenta",
+                    "A viscosidade permanece rigorosamente constante",
+                    "A viscosidade oscila aleatoriamente conforme a pressão estática"
+                ],
+                answer: 1,
+                category: "Comportamento Pseudoplástico",
+                standard: "Reologia de Fundidos",
+                explanation: "Sob elevadas taxas de cisalhamento (como na injeção ou extrusão), as cadeias poliméricas se desentrelaçam e se alinham na direção do fluxo, reduzindo a viscosidade."
+            },
+            {
+                question: "5. O Viscosímetro Capilar de Vidro do tipo Ubbelohde é especialmente utilizado para:",
+                options: [
+                    "Determinar a viscosidade de polímeros fundidos a 250 °C sem solvente",
+                    "Determinar a viscosidade intrínseca de soluções diluídas de polímeros",
+                    "Medir a resistência de resinas epóxi e adesivos de cura rápida",
+                    "Calcular o grau de reticulação em borrachas vulcanizadas"
+                ],
+                answer: 1,
+                category: "Viscosimetria em Solução",
+                standard: "ASTM D2857 / ISO 1628",
+                explanation: "O capilar Ubbelohde mede o tempo de escoamento de uma solução polimérica diluída por gravidade, permitindo calcular a viscosidade intrínseca [η] e a massa molar Mv."
+            },
+            {
+                question: "6. No ensaio de Plastometria, qual é a diferença essencial entre MFR (Melt Flow Rate) e MVR (Melt Volume Rate)?",
+                options: [
+                    "MFR mede a tenacidade ao impacto e MVR mede a dureza Shore",
+                    "MFR expressa o resultado em massa (g/10 min) e MVR expressa o resultado em volume (cm³/10 min)",
+                    "MFR é utilizado em polímeros líquidos e MVR em elastômeros reticulados",
+                    "MFR aplica ultrassom e MVR utiliza pistão pneumático"
+                ],
+                answer: 1,
+                category: "MFR vs MVR",
+                standard: "ISO 1133 Method A/B",
+                explanation: "O MFR registra a massa de polímero fundido por pesagem direta (g/10 min). O MVR mede o deslocamento volumétrico do pistão no capilar (cm³/10 min)."
+            },
+            {
+                question: "7. Como o aumento da temperatura de ensaio afeta a viscosidade de um termoplástico e a medição do seu MFI?",
+                options: [
+                    "Diminui a mobilidade das cadeias, reduzindo o MFI",
+                    "Aumenta a viscosidade do fluido e reduz o MFI",
+                    "Aumenta o volume livre e a mobilidade das cadeias, reduzindo a viscosidade e aumentando o MFI",
+                    "Não altera o comportamento reológico da resina"
+                ],
+                answer: 2,
+                category: "Efeito da Temperatura",
+                standard: "Equação de Arrhenius / WLF",
+                explanation: "A elevação de temperatura expande o volume livre entre macromoléculas e fornece energia térmica, reduzindo a viscosidade e aumentando a taxa de extrusão (MFI)."
+            },
+            {
+                question: "8. Em um reômetro capilar, qual fenômeno elástico ocorre no extrudado logo após atravessar a matriz do capilar devido à relaxação das cadeias?",
+                options: [
+                    "Inchaço do Extrudado (Die Swell / Efeito Barus)",
+                    "Cristalização por Tensão Induzida",
+                    "Polimerização de Adição Instantânea",
+                    "Degradação Hidrolítica das Pontas"
+                ],
+                answer: 0,
+                category: "Efeitos Elásticos",
+                standard: "Viscoelastofluidodinâmica",
+                explanation: "Cadeias orientadas sob forte cisalhamento na matriz tentam retornar à conformação enovelada e relaxada após sair do capilar, expandindo o diâmetro do perfil extrudado."
+            },
+            {
+                question: "9. Em um reômetro rotacional de Placas Paralelas ou Cone e Placa, como é calculada a viscosidade de cisalhamento (η)?",
+                options: [
+                    "Pela razão entre a velocidade de queda da esfera e o diâmetro do tubo",
+                    "Pela razão entre a Tensão de Cisalhamento (τ) e a Taxa de Cisalhamento (γ̇)",
+                    "Pela densidade do polímero dividida pela temperatura de fusão",
+                    "Pela medida direta da pressão de vapor na câmara hermética"
+                ],
+                answer: 1,
+                category: "Reometria de Placas",
+                standard: "ASTM D4440",
+                explanation: "A viscosidade de cisalhamento segue a Lei de Newton generalizada: η = τ / γ̇, onde a tensão τ deriva do torque e a taxa γ̇ depende da velocidade angular e geometria."
+            },
+            {
+                question: "10. Um lote de Polipropileno (PP) apresentou MFI significativamente maior que o especificado no certificado técnico. O que isso indica?",
+                options: [
+                    "Ocorreu um aumento indesejado na massa molar das cadeias",
+                    "Ocorreu degradação do polímero (cisão de cadeias / redução da massa molar)",
+                    "Há excesso de carga mineral rígida não dispersa",
+                    "A resina sofreu reticulação (crosslinking) completa"
+                ],
+                answer: 1,
+                category: "Controle de Qualidade",
+                standard: "Aplicação Industrial",
+                explanation: "A elevação anômala do MFI aponta que as cadeias foram quebradas (por degradação térmica, mecânica ou oxidativa), deixando o fluido menos viscoso e enfraquecendo o produto."
+            },
+            {
+                question: "11. Um fluido Tixotrópico caracteriza-se por:",
+                options: [
+                    "Reduzir sua viscosidade ao longo do tempo quando submetido a uma taxa de cisalhamento constante",
+                    "Aumentar sua viscosidade instantaneamente ao ser aquecido acima da Tg",
+                    "Manter a viscosidade perfeitamente invariável independentemente do tempo ou cisalhamento",
+                    "Comportar-se como sólido rígido sob qualquer valor de tensão aplicada"
+                ],
+                answer: 0,
+                category: "Comportamento Dependente do Tempo",
+                standard: "Reologia Avançada",
+                explanation: "Fluidos tixotrópicos exibem destruição reversível da sua estrutura interna com o tempo sob cisalhamento contínuo, fazendo com que a viscosidade caia progressivamente até atingir o equilíbrio."
+            },
+            {
+                question: "12. Qual é a principal função da Equação de Mark-Houwink-Sakurada ([η] = K · Mvᵃ) na viscosimetria de solução diluída?",
+                options: [
+                    "Correlacionar a viscosidade intrínseca [η] com a massa molar média viscosimétrica (Mv) do polímero",
+                    "Calcular a taxa de resfriamento necessária para moldagem por injeção",
+                    "Determinar a taxa de encolhimento dimensional de peças moldadas",
+                    "Prever a constante dielétrica do polímero sólido"
+                ],
+                answer: 0,
+                category: "Equação de Mark-Houwink",
+                standard: "Massa Molar em Solução",
+                explanation: "A equação de Mark-Houwink liga empiricamente a viscosidade intrínseca [η] à massa molar média viscosimétrica Mv através dos parâmetros K e 'a', específicos para cada par polímero-solvente e temperatura."
+            },
+            {
+                question: "13. O que é a Tensão de Escoamento (Yield Stress) observada em géis poliméricos ou pastas estruturadas (como fluidos de Bingham)?",
+                options: [
+                    "A tensão máxima que o polímero suporta antes de derreter",
+                    "A tensão mínima de cisalhamento necessária para iniciar o fluxo e fazer o fluido escoar",
+                    "A pressão interna gerada pela expansão de gases na extrusora",
+                    "A força necessária para esticar uma fibra até a ruptura"
+                ],
+                answer: 1,
+                category: "Tensão de Escoamento",
+                standard: "Fluidos Estruturados",
+                explanation: "A tensão de escoamento (Yield Stress) representa o limite abaixo do qual o material se comporta como um sólido elástico e acima do qual começa a fluir como líquido viscoso."
+            },
+            {
+                question: "14. Durante o processamento de fundidos em altas taxas de cisalhamento na matriz de uma extrusora, o aparecimento de rugosidade superficial no extrudado conhecido como 'Pele de Tubarão' (Sharkskin) é causado por:",
+                options: [
+                    "Presença de umidade excessiva na matéria-prima",
+                    "Altas tensões de cisalhamento na saída da matriz provocando rupturas locais do fundido na superfície",
+                    "Falta de pigmento na mistura mestre (masterbatch)",
+                    "Resfriamento excessivamente lento na calha de água"
+                ],
+                answer: 1,
+                category: "Instabilidades de Fluxo",
+                standard: "Extrusão de Polímeros",
+                explanation: "O efeito 'Sharkskin' ocorre devido às fortes tensões de tração/cisalhamento que atuam na camada superficial do fundido quando este deixa o capilar da matriz e sofre aceleração desigual."
+            },
+            {
+                question: "15. O modelo de Cross-Yasuda é amplamente utilizado em simulações computacionais de reologia de polímeros porque:",
+                options: [
+                    "Descreve com precisão toda a curva de viscosidade, incluindo o patamar newtoniano inicial (η₀) e a região de pseudoplasticidade",
+                    "Apenas se aplica a metais fundidos em altíssimas temperaturas",
+                    "Calcula a temperatura exata de transição vítrea (Tg) de termofixos",
+                    "Avalia unicamente a transparência óptica da peça plástica"
+                ],
+                answer: 0,
+                category: "Modelagem Reológica",
+                standard: "Simulação de Fluxo",
+                explanation: "O modelo de Cross é fundamental em engenharia pois descreve a transição entre o regime newtoniano de baixa taxa de cisalhamento (η₀) e a queda de viscosidade por pseudoplasticidade em taxas mais altas."
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let selectedOptionIndex = null;
+        let userAnswers = [];
+        let playerData = { name: '', info: '' };
+
+        const authScreen = document.getElementById('auth-screen');
+        const playerForm = document.getElementById('player-form');
+        const playerNameInput = document.getElementById('player-name');
+        const playerInfoInput = document.getElementById('player-info');
+
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+
+        const btnStart = document.getElementById('btn-start');
+        const btnNext = document.getElementById('btn-next');
+        const btnNextText = document.getElementById('btn-next-text');
+        const btnRestart = document.getElementById('btn-restart');
+        const btnReview = document.getElementById('btn-review');
+        const btnCloseReview = document.getElementById('btn-close-review');
+        const reviewModal = document.getElementById('review-modal');
+        const reviewList = document.getElementById('review-list');
+
+        const btnTopRanking = document.getElementById('btn-top-ranking');
+        const btnViewLeaderboard = document.getElementById('btn-view-leaderboard');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+        const leaderboardContainer = document.getElementById('leaderboard-container');
+
+        const questionTracker = document.getElementById('question-tracker');
+        const categoryBadge = document.getElementById('category-badge');
+        const comboContainer = document.getElementById('combo-container');
+        const comboText = document.getElementById('combo-text');
+        const scoreTracker = document.getElementById('score-tracker');
+        const progressBar = document.getElementById('progress-bar');
+        const questionBox = document.getElementById('question-box');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+
+        const explanationCard = document.getElementById('explanation-card');
+        const explanationTitle = document.getElementById('explanation-title');
+        const explanationIconBox = document.getElementById('explanation-icon-box');
+        const explanationText = document.getElementById('explanation-text');
+        const formulaTag = document.getElementById('formula-tag');
+
+        const resultGlow = document.getElementById('result-glow');
+        const resultIcon = document.getElementById('result-icon');
+        const resultTitle = document.getElementById('result-title');
+        const profileTitle = document.getElementById('profile-title');
+        const resultMessage = document.getElementById('result-message');
+        const finalScore = document.getElementById('final-score');
+        const finalPercentage = document.getElementById('final-percentage');
+        const finalCombo = document.getElementById('final-combo');
+
+        playerForm.addEventListener('submit', handlePlayerRegister);
+        btnStart.addEventListener('click', startQuiz);
+        btnNext.addEventListener('click', nextQuestion);
+        btnRestart.addEventListener('click', startQuiz);
+        btnReview.addEventListener('click', openReviewModal);
+        btnCloseReview.addEventListener('click', closeReviewModal);
+
+        btnTopRanking.addEventListener('click', openLeaderboard);
+        btnViewLeaderboard.addEventListener('click', openLeaderboard);
+        btnCloseLeaderboard.addEventListener('click', closeLeaderboard);
+
+        function handlePlayerRegister(e) {
+            e.preventDefault();
+            const name = playerNameInput.value.trim();
+            const info = playerInfoInput.value.trim();
+            if (!name) return;
+            playerData = { name, info: info || 'Geral' };
+            authScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        // SALVAR NO REALTIME DATABASE
+        async function saveScoreToFirebase(score, correctCount, combo) {
+            if (!window.firebaseDb) return;
+            try {
+                const db = window.firebaseDb;
+                const uid = window.currentUserUid || 'user_' + Math.random().toString(36).substr(2, 9);
+                await window.dbSet(window.dbRef(db, 'leaderboard/' + uid), {
+                    playerName: playerData.name,
+                    playerInfo: playerData.info,
+                    score: score,
+                    corrects: correctCount,
+                    totalQuestions: 15,
+                    maxCombo: combo,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (err) {
+                console.warn("Erro ao salvar pontuação:", err);
+            }
+        }
+
+        // BUSCAR DO REALTIME DATABASE
+        async function fetchLeaderboard() {
+            if (!window.firebaseDb) {
+                leaderboardContainer.innerHTML = `<p class="text-xs text-emerald-800 font-mono text-center py-4">Modo offline ativado.</p>`;
+                return;
+            }
+
+            leaderboardContainer.innerHTML = `
+                <div class="text-center py-8 text-emerald-800 font-mono text-xs">
+                    <i class="fa-solid fa-spinner animate-spin text-2xl text-poly-primary mb-2"></i>
+                    <p>Buscando resultados dos operadores...</p>
+                </div>
+            `;
+
+            try {
+                const dbRef = window.dbRef(window.firebaseDb);
+                const snapshot = await window.dbGet(window.dbChild(dbRef, 'leaderboard'));
+
+                if (!snapshot.exists()) {
+                    leaderboardContainer.innerHTML = `<p class="text-xs text-emerald-800 font-mono text-center py-6">Nenhum operador registrado ainda. Seja o primeiro!</p>`;
+                    return;
+                }
+
+                const data = snapshot.val();
+                let players = Object.values(data);
+                players.sort((a, b) => b.score - a.score || b.corrects - a.corrects);
+
+                leaderboardContainer.innerHTML = '';
+                players.forEach((p, rank) => {
+                    const isTop3 = rank < 3;
+                    const medals = ['🥇', '🥈', '🥉'];
+                    const medal = isTop3 ? medals[rank] : `#${rank + 1}`;
+
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between p-3.5 rounded-2xl border ${rank === 0 ? 'border-poly-accentYellow bg-amber-50' : 'border-poly-lightMint bg-white'} text-xs font-mono shadow-sm`;
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-base font-black w-7 text-center">${medal}</span>
+                            <div>
+                                <p class="font-extrabold text-poly-deepGreen text-sm">${p.playerName || 'Anônimo'}</p>
+                                <p class="text-[10px] text-emerald-700">${p.playerInfo || 'Geral'}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-black text-poly-primary text-sm">${p.score || 0} PTS</p>
+                            <p class="text-[10px] text-poly-darkGreen">${p.corrects || 0}/15 Acertos &bull; Combo ${p.maxCombo || 0}x</p>
+                        </div>
+                    `;
+                    leaderboardContainer.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Erro ao buscar leaderboard:", err);
+                leaderboardContainer.innerHTML = `<p class="text-xs text-rose-600 font-mono text-center py-4">Erro ao carregar ranking. Tente novamente.</p>`;
+            }
+        }
+
+        function openLeaderboard() {
+            leaderboardModal.classList.remove('hidden');
+            fetchLeaderboard();
+        }
+
+        function closeLeaderboard() {
+            leaderboardModal.classList.add('hidden');
+        }
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            userAnswers = [];
+
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            selectedOptionIndex = null;
+            btnNext.classList.add('hidden');
+            explanationCard.classList.add('hidden');
+
+            const currentQ = rheologyQuizData[currentQuestionIndex];
+
+            questionTracker.textContent = `Ensaio ${currentQuestionIndex + 1}/${rheologyQuizData.length}`;
+            categoryBadge.textContent = currentQ.category || 'Reologia de Polímeros';
+            scoreTracker.textContent = `${score} PTS`;
+
+            const progressPercent = ((currentQuestionIndex) / rheologyQuizData.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            if (combo > 1) {
+                comboContainer.classList.remove('hidden');
+                comboContainer.classList.add('flex');
+                comboText.textContent = `TAXA DE CISALHAMENTO x${combo}`;
+            } else {
+                comboContainer.classList.add('hidden');
+                comboContainer.classList.remove('flex');
+            }
+
+            questionText.textContent = currentQ.question;
+
+            optionsContainer.innerHTML = '';
+            currentQ.options.forEach((optText, idx) => {
+                const button = document.createElement('button');
+                button.className = `w-full text-left p-4 rounded-2xl border-2 border-poly-lightMint bg-white hover:bg-poly-paleGreen hover:border-poly-primary text-poly-deepGreen font-medium transition-all duration-200 flex items-center justify-between group cursor-pointer shadow-sm`;
+
+                button.innerHTML = `
+                    <span class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-poly-lightMint text-poly-darkGreen group-hover:bg-poly-primary group-hover:text-white flex items-center justify-center font-mono text-xs font-bold transition-colors border border-poly-mint/30">
+                            ${String.fromCharCode(65 + idx)}
+                        </span>
+                        <span class="text-xs sm:text-sm text-poly-deepGreen font-semibold">${optText}</span>
+                    </span>
+                    <i class="fa-regular fa-circle text-emerald-400 group-hover:text-poly-primary icon-status text-lg"></i>
+                `;
+
+                button.addEventListener('click', () => selectOption(idx, button));
+                optionsContainer.appendChild(button);
+            });
+
+            questionBox.classList.remove('laminar-flow-anim');
+            void questionBox.offsetWidth;
+            questionBox.classList.add('laminar-flow-anim');
+        }
+
+        function selectOption(index, selectedBtn) {
+            if (selectedOptionIndex !== null) return;
+
+            selectedOptionIndex = index;
+            const currentQ = rheologyQuizData[currentQuestionIndex];
+            const isCorrect = index === currentQ.answer;
+
+            const allButtons = optionsContainer.querySelectorAll('button');
+            allButtons.forEach(btn => btn.classList.add('pointer-events-none'));
+
+            if (isCorrect) {
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+
+                const earnedScore = 100 * combo;
+                score += earnedScore;
+                scoreTracker.textContent = `${score} PTS`;
+
+                selectedBtn.className = `w-full text-left p-4 rounded-2xl border-2 border-poly-primary bg-poly-lightMint text-poly-deepGreen font-semibold transition-all duration-200 flex items-center justify-between laminar-flow-anim shadow-sm`;
+                selectedBtn.querySelector('.icon-status').className = 'fa-solid fa-circle-check text-poly-primary text-xl';
+
+                explanationTitle.textContent = "CORRETO - FUNDAMENTAÇÃO REOLÓGICA";
+                explanationTitle.className = "text-xs font-mono font-extrabold uppercase tracking-wider text-poly-darkGreen";
+                explanationIconBox.className = "w-10 h-10 rounded-xl bg-poly-lightMint border border-poly-mint flex items-center justify-center text-poly-primary text-xl flex-shrink-0 mt-0.5";
+            } else {
+                combo = 0;
+
+                selectedBtn.className = `w-full text-left p-4 rounded-2xl border-2 border-rose-500 bg-rose-50 text-rose-900 font-semibold transition-all duration-200 flex items-center justify-between capillary-clog-anim shadow-sm`;
+                selectedBtn.querySelector('.icon-status').className = 'fa-solid fa-circle-xmark text-rose-600 text-xl';
+
+                const correctBtn = allButtons[currentQ.answer];
+                correctBtn.className = `w-full text-left p-4 rounded-2xl border-2 border-poly-primary bg-poly-lightMint text-poly-deepGreen font-semibold transition-all duration-200 flex items-center justify-between`;
+                correctBtn.querySelector('.icon-status').className = 'fa-solid fa-circle-check text-poly-primary text-xl';
+
+                explanationTitle.textContent = "INCORRETO - REVISÃO DA TEORIA";
+                explanationTitle.className = "text-xs font-mono font-extrabold uppercase tracking-wider text-rose-700";
+                explanationIconBox.className = "w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-600 text-xl flex-shrink-0 mt-0.5";
+            }
+
+            userAnswers.push({
+                questionIndex: currentQuestionIndex,
+                selectedOption: index,
+                isCorrect: isCorrect
+            });
+
+            explanationText.textContent = currentQ.explanation;
+            formulaTag.textContent = currentQ.standard || 'Norma ISO / ASTM';
+            explanationCard.classList.remove('hidden');
+
+            if (currentQuestionIndex === rheologyQuizData.length - 1) {
+                btnNextText.textContent = "Finalizar & Gerar Relatório (15/15)";
+            } else {
+                btnNextText.textContent = "Próximo Ensaio";
+            }
+
+            btnNext.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < rheologyQuizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            progressBar.style.width = '100%';
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            const total = rheologyQuizData.length;
+            const correctCount = userAnswers.filter(a => a.isCorrect).length;
+            const percentage = Math.round((correctCount / total) * 100);
+
+            finalScore.textContent = `${correctCount} / ${total}`;
+            finalPercentage.textContent = `${percentage}%`;
+            finalCombo.textContent = `${maxCombo}x`;
+
+            saveScoreToFirebase(score, correctCount, maxCombo);
+
+            if (percentage === 100) {
+                profileTitle.textContent = "MESTRE ABSOLUTO EM REOLOGIA DE POLÍMEROS";
+                resultTitle.textContent = "FLUIDEZ PERFEITA! 🏆";
+                resultMessage.textContent = "Você gabaritou todas as 15 questões sobre reologia, viscosimetria e plastometria de polímeros!";
+                resultIcon.className = "fa-solid fa-award text-6xl text-poly-accentYellow animate-bounce";
+                triggerFullConfetti();
+            } else if (percentage >= 60) {
+                profileTitle.textContent = "ESPECIALISTA EM PROCESSAMENTO DE FUNDIDOS";
+                resultTitle.textContent = "ENSAIO APROVADO! 🧪";
+                resultMessage.textContent = "Ótimo conhecimento sobre MFI, viscosidade intrínseca e comportamento de polímeros!";
+                resultIcon.className = "fa-solid fa-flask text-6xl text-poly-primary";
+                triggerSoftConfetti();
+            } else {
+                profileTitle.textContent = "ALERTA: REVISÃO DE CONCEITOS REOLÓGICOS";
+                resultTitle.textContent = "ALTA VISCOSIDADE / ENTUPIMENTO ⚠️";
+                resultMessage.textContent = "Revise as explicações técnicas no gabarito para reforçar seus conhecimentos!";
+                resultIcon.className = "fa-solid fa-triangle-exclamation text-6xl text-amber-500";
+            }
+        }
+
+        function openReviewModal() {
+            reviewList.innerHTML = '';
+            rheologyQuizData.forEach((q, idx) => {
+                const uAns = userAnswers[idx];
+                const isCorrect = uAns ? uAns.isCorrect : false;
+
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-2xl border-2 ${isCorrect ? 'border-poly-mint bg-white' : 'border-rose-300 bg-rose-50/50'} space-y-2 text-xs font-mono shadow-sm`;
+
+                item.innerHTML = `
+                    <div class="flex items-center justify-between font-bold">
+                        <span class="${isCorrect ? 'text-poly-primary' : 'text-rose-600'}">
+                            ${isCorrect ? '✓ CORRETO' : '✗ INCORRETO'} - Ensaio #${idx + 1}
+                        </span>
+                        <span class="text-emerald-800 text-[10px]">${q.category}</span>
+                    </div>
+                    <p class="font-sans font-semibold text-poly-deepGreen text-sm">${q.question}</p>
+                    <p class="text-emerald-950"><strong class="text-poly-darkGreen">Sua Resposta:</strong> ${uAns ? q.options[uAns.selectedOption] : 'Nenhum'}</p>
+                    ${!isCorrect ? `<p class="text-emerald-950"><strong class="text-poly-primary">Resposta Correta:</strong> ${q.options[q.answer]}</p>` : ''}
+                    <div class="p-2.5 rounded-xl bg-poly-paleGreen border border-poly-lightMint text-emerald-950 text-[11px] leading-relaxed">
+                        💡 <strong>Análise:</strong> ${q.explanation}
+                    </div>
+                `;
+                reviewList.appendChild(item);
+            });
+            reviewModal.classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            reviewModal.classList.add('hidden');
+        }
+
+        function triggerFullConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#059669', '#10b981', '#34d399', '#f59e0b'] });
+            }
+        }
+
+        function triggerSoftConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 }, colors: ['#059669', '#10b981'] });
+            }
+        }
+
+        const canvas = document.getElementById('rheology-bg-canvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+        let chains = [];
+
+        function resizeCanvas() {
+            if (!canvas) return;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initChains();
+        }
+
+        function initChains() {
+            chains = [];
+            const count = Math.min(Math.floor(window.innerWidth / 120), 12);
+            for (let i = 0; i < count; i++) {
+                let nodes = [];
+                let length = Math.floor(Math.random() * 5) + 4;
+                let startX = Math.random() * canvas.width;
+                let startY = Math.random() * canvas.height;
+
+                for (let j = 0; j < length; j++) {
+                    nodes.push({ x: startX + j * 18, y: startY + Math.sin(j) * 12 });
+                }
+                chains.push({ nodes: nodes, speedY: Math.random() * 0.4 + 0.1, angle: Math.random() * Math.PI * 2 });
+            }
+        }
+
+        function animateBg() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            chains.forEach(chain => {
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+                ctx.lineWidth = 2;
+
+                for (let i = 0; i < chain.nodes.length; i++) {
+                    let node = chain.nodes[i];
+                    node.y += chain.speedY;
+                    node.x += Math.sin(node.y * 0.02) * 0.3;
+
+                    if (i === 0) ctx.moveTo(node.x, node.y);
+                    else ctx.lineTo(node.x, node.y);
+                }
+                ctx.stroke();
+
+                chain.nodes.forEach(node => {
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(5, 150, 105, 0.3)';
+                    ctx.fill();
+                });
+
+                if (chain.nodes[0].y > canvas.height + 50) {
+                    let startX = Math.random() * canvas.width;
+                    chain.nodes.forEach((node, idx) => {
+                        node.x = startX + idx * 18;
+                        node.y = -50 + Math.sin(idx) * 12;
+                    });
+                }
+            });
+            requestAnimationFrame(animateBg);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.onload = function() {
+            resizeCanvas();
+            animateBg();
+        };
+    </script>
+</body>
+</html>
